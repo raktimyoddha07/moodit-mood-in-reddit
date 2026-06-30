@@ -2,9 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getSearchResults, SearchResults, Post } from "@/lib/api";
-import DonutChart   from "@/components/charts/DonutChart";
-import TimelineChart from "@/components/charts/TimelineChart";
-import PostCard      from "@/components/PostCard";
+import { downloadCSV } from "@/lib/textUtils";
+import DonutChart     from "@/components/charts/DonutChart";
+import TimelineChart  from "@/components/charts/TimelineChart";
+import PostCard       from "@/components/PostCard";
+import WordCloud      from "@/components/WordCloud";
+import EntitiesTable  from "@/components/EntitiesTable";
+import BigramsTable   from "@/components/BigramsTable";
 
 /* ── Sentiment palette ── */
 const DONUT_SLICES = (s: SearchResults["summary"]) =>
@@ -36,6 +40,15 @@ function Skeleton({ h = 180 }: { h?: number }) {
       backgroundSize: "200% 100%",
       animation: "shimmer 1.5s infinite",
     }} />
+  );
+}
+
+function SectionHeader({ title, subtitle, compact = false }: { title: string; subtitle: string; compact?: boolean }) {
+  return (
+    <div style={{ marginBottom: compact ? 16 : 24 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>{title}</h3>
+      <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{subtitle}</p>
+    </div>
   );
 }
 
@@ -268,6 +281,69 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* ── Row 4: Word Clouds ── */}
+              <div>
+                <SectionHeader title="☁️ Word Clouds" subtitle="Most frequent words per sentiment — hover for count" />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+                  {(["Positive","Neutral","Negative"] as const).map((lbl) => {
+                    const lPosts = allPosts.filter((p) => p.sentiment.label === lbl);
+                    const sentColor = lbl === "Positive" ? "#10b981" : lbl === "Negative" ? "#ef4444" : "#64748b";
+                    return (
+                      <div key={lbl} className="card" style={{ padding: "20px 22px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: sentColor, boxShadow: `0 0 6px ${sentColor}` }} />
+                          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: sentColor }}>
+                            {lbl.toUpperCase()}
+                          </span>
+                          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginLeft: "auto" }}>
+                            {lPosts.length} posts
+                          </span>
+                        </div>
+                        <WordCloud posts={lPosts} label={lbl} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── Row 5: Entities + Bigrams side by side ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
+                <div className="card" style={{ padding: "24px 28px" }}>
+                  <SectionHeader title="🔎 Top Entities" subtitle="Grouped by spaCy entity type" compact />
+                  <EntitiesTable posts={allPosts} />
+                </div>
+                <div className="card" style={{ padding: "24px 28px" }}>
+                  <SectionHeader title="📝 Top Bigrams" subtitle="Most frequent two-word phrases" compact />
+                  <BigramsTable posts={allPosts} />
+                </div>
+              </div>
+
+              {/* ── Row 6: Export ── */}
+              <div className="card" style={{ padding: "24px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.8)", marginBottom: 4 }}>💾 Export Results</p>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>
+                    Download all {allPosts.length} analysed posts with scores, entities and explanations as CSV.
+                  </p>
+                </div>
+                <button
+                  onClick={() => downloadCSV(allPosts, `moodit_${req?.keyword ?? "results"}_${params.id}.csv`)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "11px 22px", borderRadius: 12, border: "none", cursor: "pointer",
+                    background: "linear-gradient(135deg,#7c3aed,#3b82f6)",
+                    color: "#fff", fontSize: 14, fontWeight: 700,
+                    boxShadow: "0 4px 20px rgba(124,58,237,0.3)",
+                    transition: "opacity 0.2s, transform 0.15s",
+                    flexShrink: 0,
+                  }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity="0.88"; (e.currentTarget as HTMLButtonElement).style.transform="translateY(-1px)"; }}
+                  onMouseOut={(e)  => { (e.currentTarget as HTMLButtonElement).style.opacity="1";    (e.currentTarget as HTMLButtonElement).style.transform="translateY(0)"; }}
+                >
+                  ↓ Download CSV
+                </button>
               </div>
 
             </div>
