@@ -7,10 +7,14 @@ env/
 __pycache__/
 /frontend-astro
 
+# Web dependencies
+node_modules/
+.next/
+
+
 # Local config
 .env
 
-/uploads
 
 # Cache/Logs
 .pytest_cache/
