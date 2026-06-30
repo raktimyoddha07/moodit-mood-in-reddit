@@ -1,0 +1,24 @@
+# Python environment
+.venv/
+venv/
+ENV/
+env/
+*.pyc
+__pycache__/
+/frontend-astro
+
+# Local config
+.env
+
+/uploads
+
+# Cache/Logs
+.pytest_cache/
+*.log
+
+AGENTS.md
+PHASE.md
+logicfix.md
+app.py
+
+
