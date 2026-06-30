@@ -1,0 +1,14 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.28.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+praw>=7.7.1
+vaderSentiment>=3.3.2
+textblob>=0.17.1
+spacy>=3.5.0
+transformers>=4.30.0
+torch>=2.0.0
+google-genai>=0.1.1
