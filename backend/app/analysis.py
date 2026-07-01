@@ -80,11 +80,14 @@ def fetch_reddit_posts(query: str, limit: int, subreddit_name: Optional[str], ti
     Fetches posts from Reddit based on query, limit, subreddit, and time window constraints.
     """
     cutoff = None
+    time_filter = "all"
     # Calculate cutoff timezone-aware or UTC-based depending on PRAW's utc timestamp
     if time_window == "Last 24h":
         cutoff = datetime.utcnow() - timedelta(days=1)
+        time_filter = "day"
     elif time_window == "Last 7d":
         cutoff = datetime.utcnow() - timedelta(days=7)
+        time_filter = "week"
     
     # Initialize PRAW Reddit client using env configuration
     reddit = praw.Reddit(
@@ -97,7 +100,8 @@ def fetch_reddit_posts(query: str, limit: int, subreddit_name: Optional[str], ti
     area = reddit.subreddit(subreddit_str) if subreddit_str else reddit.subreddit("all")
     
     records = []
-    for post in area.search(query, limit=limit, sort="new"):
+    # Use time_filter to request the correct time frame from Reddit API
+    for post in area.search(query, limit=limit, sort="new", time_filter=time_filter):
         created = datetime.utcfromtimestamp(post.created_utc)
         if cutoff and created < cutoff:
             continue
