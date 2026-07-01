@@ -11,6 +11,7 @@ export interface SearchPayload {
   w_vader: number;
   w_blob: number;
   w_bert: number;
+  llm_provider: "gemini" | "ollama";
 }
 
 export interface SearchStatus {
@@ -28,6 +29,7 @@ export interface SearchStatus {
   error_message: string | null;
   created_at: string;
   updated_at: string;
+  ai_summary?: string | null;
 }
 
 export interface SentimentScore {

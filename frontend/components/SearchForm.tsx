@@ -36,6 +36,7 @@ export default function SearchForm({ onSearchStarted, onError }: Props) {
   const [weights, setWeights] = useState({ vader: 0.4, blob: 0.3, bert: 0.3 });
   const [entities, setEntities] = useState<string[]>(["ORG", "MONEY", "PRODUCT"]);
   const [loading, setLoading] = useState(false);
+  const [llmProvider, setLlmProvider] = useState<"gemini" | "ollama">("gemini");
 
   const handleWeightChange = (key: "vader" | "blob" | "bert", val: number) => {
     const keys = ["vader", "blob", "bert"] as const;
@@ -86,6 +87,7 @@ export default function SearchForm({ onSearchStarted, onError }: Props) {
         w_vader:        weights.vader,
         w_blob:         weights.blob,
         w_bert:         weights.bert,
+        llm_provider:   llmProvider,
       };
       const status = await createSearch(payload);
       onSearchStarted(status);
@@ -238,7 +240,49 @@ export default function SearchForm({ onSearchStarted, onError }: Props) {
 
         <div className="divider" />
 
-        {/* ── Section 4: Submit ── */}
+        {/* ── Section 4: AI Summary Provider ── */}
+        <div className="card-section">
+          <p className="field-label" style={{ marginBottom: 16 }}>AI Summary Provider</p>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
+            Choose which LLM generates the overall sentiment summary.
+          </p>
+          <div style={{ display: "flex", gap: 12 }}>
+            {([
+              { value: "gemini", label: "✨ Google Gemini", sub: "gemini-2.0-flash · requires API key", color: "#a78bfa" },
+              { value: "ollama", label: "🦙 Ollama (Local)", sub: `${process.env.NEXT_PUBLIC_OLLAMA_MODEL ?? "qwen2.5:7b-instruct"} · no API key needed`, color: "#34d399" },
+            ] as const).map(({ value, label, sub, color }) => {
+              const active = llmProvider === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setLlmProvider(value)}
+                  style={{
+                    flex: 1, padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+                    border: active ? `1px solid ${color}55` : "1px solid rgba(255,255,255,0.08)",
+                    background: active ? `${color}12` : "rgba(255,255,255,0.03)",
+                    textAlign: "left", transition: "all 0.18s",
+                    boxShadow: active ? `0 0 16px ${color}22` : "none",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    {active && (
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block", boxShadow: `0 0 6px ${color}` }} />
+                    )}
+                    <span style={{ fontSize: 13, fontWeight: 700, color: active ? color : "rgba(255,255,255,0.55)" }}>
+                      {label}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", margin: 0 }}>{sub}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="divider" />
+
+        {/* ── Section 5: Submit ── */}
         <div className="card-section">
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? (

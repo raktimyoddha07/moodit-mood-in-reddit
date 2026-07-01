@@ -1,4 +1,6 @@
 import re
+import json
+import urllib.request
 from datetime import datetime, timedelta
 from typing import List, Optional
 import praw
@@ -7,7 +9,6 @@ from spacy.cli import download as spacy_download
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from textblob import TextBlob
 from transformers import pipeline
-from google import genai
 
 from app.config import settings
 
@@ -27,8 +28,51 @@ bert = pipeline(
     model="distilbert-base-uncased-finetuned-sst-2-english"
 )
 
-# Gemini API Client
-gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+# Gemini client — only initialized if API key is set
+gemini_client = None
+if settings.GEMINI_API_KEY:
+    try:
+        from google import genai as _genai
+        gemini_client = _genai.Client(api_key=settings.GEMINI_API_KEY)
+    except Exception:
+        gemini_client = None
+
+
+def _call_ollama(prompt: str) -> str:
+    """Calls Ollama's local HTTP API to generate a completion."""
+    payload = json.dumps({
+        "model": settings.OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False
+    }).encode("utf-8")
+    url = f"{settings.OLLAMA_HOST.rstrip('/')}/api/generate"
+    req = urllib.request.Request(
+        url, data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+    return result.get("response", "").strip()
+
+
+def _call_gemini(prompt: str) -> str:
+    """Calls Gemini API to generate a completion."""
+    if gemini_client is None:
+        raise RuntimeError("Gemini API key is not configured. Set GEMINI_API_KEY in backend/.env")
+    resp = gemini_client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt
+    )
+    return resp.text.strip()
+
+
+def _call_llm(prompt: str, provider: str) -> str:
+    """Routes LLM calls to either Gemini or Ollama based on provider string."""
+    if provider == "ollama":
+        return _call_ollama(prompt)
+    else:
+        return _call_gemini(prompt)
 
 
 def fetch_reddit_posts(query: str, limit: int, subreddit_name: Optional[str], time_window: str) -> List[dict]:
@@ -160,3 +204,24 @@ def generate_llm_explanation(text: str, label: str) -> str:
         return resp.text.strip()
     except Exception as e:
         return f"LLM Error: {str(e)}"
+
+
+def generate_llm_summary(keyword: str, positive_posts: List[str], negative_posts: List[str], provider: str = "gemini") -> str:
+    """
+    Generates a brief summary of people's mood/sentiment regarding the keyword,
+    by reading the top positive and negative posts. Supports Gemini or Ollama.
+    """
+    pos_text = "\n".join([f"- {p}" for p in positive_posts]) if positive_posts else "None"
+    neg_text = "\n".join([f"- {p}" for p in negative_posts]) if negative_posts else "None"
+
+    prompt = (
+        f"You are analyzing public sentiment about the keyword '{keyword}'.\n"
+        f"Here are the top most positive posts:\n{pos_text}\n\n"
+        f"Here are the top most negative posts:\n{neg_text}\n\n"
+        f"Provide a single brief, insightful summary (2-3 sentences) of the general mood, "
+        f"what people are happy about, and what they are complaining about. Keep it concise."
+    )
+    try:
+        return _call_llm(prompt, provider)
+    except Exception as e:
+        return f"Failed to generate AI summary: {str(e)}"

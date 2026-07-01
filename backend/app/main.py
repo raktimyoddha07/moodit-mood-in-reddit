@@ -17,6 +17,15 @@ async def lifespan(app: FastAPI):
     # Startup: Create database tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Migrate existing DB if needed
+        try:
+            await conn.execute(text("ALTER TABLE search_requests ADD COLUMN IF NOT EXISTS ai_summary TEXT;"))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("ALTER TABLE search_requests ADD COLUMN IF NOT EXISTS llm_provider VARCHAR(50) DEFAULT 'gemini';"))
+        except Exception:
+            pass
     yield
     # Shutdown: Clean up connections
     await engine.dispose()
@@ -73,6 +82,7 @@ async def create_search(
         w_vader=request.w_vader,
         w_blob=request.w_blob,
         w_bert=request.w_bert,
+        llm_provider=request.llm_provider,
         status="pending"
     )
     db.add(db_search)

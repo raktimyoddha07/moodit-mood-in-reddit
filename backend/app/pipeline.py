@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import select
 from app.database import SessionLocal
 from app.models import SearchRequest, RedditPost, PostSentimentResult, ExtractedEntity, LlmExplanation
-from app.analysis import fetch_reddit_posts, preprocess_text, analyze_sentiment, extract_entities, generate_llm_explanation
+from app.analysis import fetch_reddit_posts, preprocess_text, analyze_sentiment, extract_entities, generate_llm_explanation, generate_llm_summary
 
 logger = logging.getLogger("app.pipeline")
 logging.basicConfig(level=logging.INFO)
@@ -118,7 +118,7 @@ async def run_analysis_pipeline(search_id: int):
             
             await db.flush()
             
-            # 5. LLM explanations for extreme positive/negative posts
+            # 5. Single LLM summary for the search request using top positive/negative posts
             positives = [res for res in results_to_save if res[0].ensemble_score > 0.1]
             negatives = [res for res in results_to_save if res[0].ensemble_score < -0.1]
             
@@ -126,16 +126,11 @@ async def run_analysis_pipeline(search_id: int):
             top_positives = sorted(positives, key=lambda x: x[0].ensemble_score, reverse=True)[:3]
             top_negatives = sorted(negatives, key=lambda x: x[0].ensemble_score)[:3]
             
-            subset_to_explain = top_positives + top_negatives
-            
-            for db_sent, db_post in subset_to_explain:
-                explanation_text = generate_llm_explanation(db_post.text, db_sent.label)
-                db_explanation = LlmExplanation(
-                    search_id=search_id,
-                    post_id=db_post.id,
-                    explanation=explanation_text
-                )
-                db.add(db_explanation)
+            pos_texts = [db_post.text for _, db_post in top_positives]
+            neg_texts = [db_post.text for _, db_post in top_negatives]
+
+            provider = getattr(search_req, "llm_provider", "gemini") or "gemini"
+            search_req.ai_summary = generate_llm_summary(search_req.keyword, pos_texts, neg_texts, provider)
             
             # Complete search
             search_req.status = "completed"

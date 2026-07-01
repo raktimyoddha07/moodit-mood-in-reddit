@@ -22,6 +22,8 @@ class SearchRequest(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+    ai_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    llm_provider: Mapped[str] = mapped_column(String(50), default="gemini")
 
     # Relationships
     sentiment_results: Mapped[List["PostSentimentResult"]] = relationship(

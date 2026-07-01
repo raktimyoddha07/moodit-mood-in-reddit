@@ -231,8 +231,58 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
+              {/* ── Row 2.5: AI Mood Summary ── */}
+              {req?.ai_summary && (() => {
+                const isOllama = req.llm_provider === "ollama";
+                const providerLabel = isOllama ? "🦙 Ollama (Local)" : "✨ Google Gemini";
+                const providerColor = isOllama ? "#34d399" : "#a78bfa";
+                const borderColor   = isOllama ? "rgba(52,211,153,0.25)" : "rgba(124,58,237,0.25)";
+                const bgGradient    = isOllama
+                  ? "linear-gradient(135deg, rgba(52,211,153,0.07) 0%, rgba(59,130,246,0.07) 100%)"
+                  : "linear-gradient(135deg, rgba(124,58,237,0.07) 0%, rgba(59,130,246,0.07) 100%)";
+                return (
+                  <div className="card fade-up" style={{
+                    padding: "28px 32px",
+                    background: bgGradient,
+                    border: `1px solid ${borderColor}`,
+                    boxShadow: `0 8px 32px 0 ${providerColor}10`,
+                    borderRadius: 16
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                      <span style={{ fontSize: 28 }}>🤖</span>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>AI Mood Analysis Summary</h3>
+                        <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                          Synthesized from top positive &amp; negative posts
+                        </p>
+                      </div>
+                      <span style={{
+                        padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+                        background: `${providerColor}15`, border: `1px solid ${providerColor}40`,
+                        color: providerColor, letterSpacing: "0.05em"
+                      }}>
+                        {providerLabel}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: 14,
+                      color: "rgba(255, 255, 255, 0.85)",
+                      lineHeight: 1.7,
+                      whiteSpace: "pre-wrap",
+                      background: "rgba(255, 255, 255, 0.02)",
+                      border: "1px solid rgba(255, 255, 255, 0.04)",
+                      borderRadius: 12,
+                      padding: "16px 20px"
+                    }}>
+                      {req.ai_summary}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── Row 3: Post List ── */}
               <div>
+
                 {/* Filter + Sort bar */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.6)", marginRight: 4 }}>
@@ -240,7 +290,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                   </p>
 
                   {/* Filter chips */}
-                  <div style={{ display: "flex", gap: 6, flex: 1 }}>
+                  <div style={{ display: "flex", gap: 6, flex: 1, flexWrap: "wrap" }}>
                     {(["All", "Positive", "Neutral", "Negative"] as FilterKey[]).map((f) => (
                       <button
                         key={f}

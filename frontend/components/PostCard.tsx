@@ -60,6 +60,7 @@ export default function PostCard({ post, rank }: Props) {
               {post.sentiment.label.toUpperCase()}
             </span>
 
+
             <span style={{
               fontFamily: "monospace", fontSize: 13, fontWeight: 700,
               color: score > 0.1 ? "#34d399" : score < -0.1 ? "#f87171" : "#94a3b8",
@@ -116,33 +117,6 @@ export default function PostCard({ post, rank }: Props) {
                   <span style={{ opacity: 0.5, marginLeft: 4, fontSize: 9 }}>{ent.label}</span>
                 </span>
               ))}
-            </div>
-          )}
-
-          {/* Explanation (collapsible) */}
-          {post.explanation && (
-            <div>
-              <button
-                onClick={() => setExpanded((x) => !x)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  fontSize: 12, color: "#a78bfa", cursor: "pointer",
-                  border: "none", background: "none", padding: 0, marginBottom: expanded ? 10 : 0,
-                }}
-              >
-                <span style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", display: "inline-block" }}>▶</span>
-                {expanded ? "Hide" : "View"} AI Explanation
-              </button>
-              {expanded && (
-                <div style={{
-                  borderRadius: 10, border: "1px solid rgba(124,58,237,0.2)",
-                  background: "rgba(124,58,237,0.06)", padding: "14px 16px",
-                  fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7,
-                  whiteSpace: "pre-wrap",
-                }}>
-                  {post.explanation}
-                </div>
-              )}
             </div>
           )}
 

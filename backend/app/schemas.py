@@ -11,6 +11,7 @@ class SearchRequestCreate(BaseModel):
     w_vader: float = 0.4
     w_blob: float = 0.3
     w_bert: float = 0.3
+    llm_provider: str = "gemini"
 
 class SearchRequestResponse(BaseModel):
     id: int
@@ -27,6 +28,8 @@ class SearchRequestResponse(BaseModel):
     error_message: Optional[str]
     created_at: datetime
     updated_at: datetime
+    ai_summary: Optional[str] = None
+    llm_provider: str = "gemini"
 
     class Config:
         from_attributes = True

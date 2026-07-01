@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from typing import Optional
 import os
 
 class Settings(BaseSettings):
@@ -7,7 +8,9 @@ class Settings(BaseSettings):
     REDDIT_CLIENT_ID: str = Field(..., description="Reddit Client ID")
     REDDIT_CLIENT_SECRET: str = Field(..., description="Reddit Client Secret")
     REDDIT_USER_AGENT: str = Field(..., description="Reddit User Agent")
-    GEMINI_API_KEY: str = Field(..., description="Gemini API Key")
+    GEMINI_API_KEY: Optional[str] = Field(None, description="Gemini API Key")
+    OLLAMA_HOST: str = Field("http://localhost:11434", description="Ollama Host URL")
+    OLLAMA_MODEL: str = Field("qwen2.5:7b-instruct", description="Ollama Model Name")
 
     # This configuration loads the env file relative to config.py's directory or current directory
     model_config = SettingsConfigDict(
