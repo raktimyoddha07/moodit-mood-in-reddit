@@ -37,10 +37,37 @@ export default function SearchForm({ onSearchStarted, onError }: Props) {
   const [entities, setEntities] = useState<string[]>(["ORG", "MONEY", "PRODUCT"]);
   const [loading, setLoading] = useState(false);
 
-  const totalW = weights.vader + weights.blob + weights.bert || 1;
-
-  const setWeight = (key: "vader" | "blob" | "bert", val: number) =>
-    setWeights((prev) => ({ ...prev, [key]: val }));
+  const handleWeightChange = (key: "vader" | "blob" | "bert", val: number) => {
+    const keys = ["vader", "blob", "bert"] as const;
+    const otherKeys = keys.filter((k) => k !== key);
+    
+    const targetVal = Math.min(Math.max(val, 0), 1);
+    const remaining = 1.0 - targetVal;
+    
+    const prevOtherSum = otherKeys.reduce((sum, k) => sum + weights[k], 0);
+    
+    let newWeights = { ...weights };
+    newWeights[key] = targetVal;
+    
+    if (prevOtherSum > 0) {
+      otherKeys.forEach((k) => {
+        newWeights[k] = parseFloat((remaining * (weights[k] / prevOtherSum)).toFixed(3));
+      });
+    } else {
+      otherKeys.forEach((k) => {
+        newWeights[k] = parseFloat((remaining / 2).toFixed(3));
+      });
+    }
+    
+    // Adjust for any floating point rounding issues so it sums EXACTLY to 1.0
+    const finalSum = newWeights.vader + newWeights.blob + newWeights.bert;
+    const diff = parseFloat((1.0 - finalSum).toFixed(3));
+    if (diff !== 0) {
+      newWeights[otherKeys[0]] = parseFloat((newWeights[otherKeys[0]] + diff).toFixed(3));
+    }
+    
+    setWeights(newWeights);
+  };
 
   const toggleEntity = (v: string) =>
     setEntities((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]);
@@ -147,13 +174,13 @@ export default function SearchForm({ onSearchStarted, onError }: Props) {
           <p className="field-label" style={{ marginBottom: 20 }}>
             Model Weights
             <span style={{ marginLeft: 8, color: "var(--text-muted)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
-              — auto-normalised to 100%
+              — sums to exactly 100%
             </span>
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             {WEIGHT_CONFIG.map(({ key, label, color, glowColor }) => {
               const val = weights[key];
-              const pct = Math.round((val / totalW) * 100);
+              const pct = Math.round(val * 100);
               return (
                 <div key={key}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -162,18 +189,14 @@ export default function SearchForm({ onSearchStarted, onError }: Props) {
                       {pct}%
                     </span>
                   </div>
-                  {/* Visual fill bar */}
-                  <div className="weight-bar-track" style={{ marginBottom: 8 }}>
-                    <div
-                      className="weight-bar-fill"
-                      style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}88, ${color})` }}
-                    />
-                  </div>
                   <input
-                    type="range" min={0} max={1} step={0.05}
+                    type="range" min={0} max={1} step={0.01}
                     className="slider"
                     value={val}
-                    onChange={(e) => setWeight(key, Number(e.target.value))}
+                    onChange={(e) => handleWeightChange(key, Number(e.target.value))}
+                    style={{
+                      background: `linear-gradient(90deg, ${color} 0%, ${color} ${val * 100}%, rgba(255,255,255,0.08) ${val * 100}%, rgba(255,255,255,0.08) 100%)`
+                    }}
                   />
                 </div>
               );

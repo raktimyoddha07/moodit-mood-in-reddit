@@ -13,7 +13,7 @@ Moodit is a high-performance, two-tier web dashboard that analyzes real-time pub
 The system uses a non-blocking asynchronous pipeline executed in backend worker tasks:
 
 ```mermaid
-graph TD
+graph LR
     A[User Submits Search Parameters] --> B[FastAPI /api/search Endpoint]
     B --> C[Create SearchRequest Database Entry]
     C --> D[Trigger Asynchronous Background Task]
