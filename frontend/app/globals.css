@@ -7,24 +7,24 @@
 :root {
   --font-sans:      "Inter", system-ui, -apple-system, sans-serif;
 
-  /* Palette */
-  --bg:             #080812;
-  --bg-elevated:    #0f0f1a;
-  --surface:        rgba(255, 255, 255, 0.035);
-  --surface-hover:  rgba(255, 255, 255, 0.06);
-  --border:         rgba(255, 255, 255, 0.07);
-  --border-focus:   rgba(124, 58, 237, 0.55);
+  /* Clean Slate Palette */
+  --bg:             #0a0f1d;
+  --bg-elevated:    #111827;
+  --surface:        rgba(255, 255, 255, 0.025);
+  --surface-hover:  rgba(255, 255, 255, 0.05);
+  --border:         rgba(255, 255, 255, 0.06);
+  --border-focus:   rgba(99, 102, 241, 0.5);
 
-  /* Brand */
-  --violet:         #7c3aed;
-  --blue:           #3b82f6;
-  --teal:           #14b8a6;
+  /* Brand Colors - Toned down and premium */
+  --violet:         #6366f1; /* Indigo */
+  --blue:           #3b82f6; 
+  --teal:           #0ea5e9;
   --emerald:        #10b981;
 
   /* Text */
-  --text-primary:   #f1f1f5;
-  --text-secondary: rgba(241, 241, 245, 0.55);
-  --text-muted:     rgba(241, 241, 245, 0.3);
+  --text-primary:   #f3f4f6;
+  --text-secondary: rgba(243, 244, 246, 0.6);
+  --text-muted:     rgba(243, 244, 246, 0.35);
 }
 
 /* ── Reset & Base ── */
@@ -40,11 +40,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Page background — two large blurred blobs ── */
+/* ── Page background — very subtle, professional gradient ── */
 .page-bg {
   background:
-    radial-gradient(ellipse 70% 55% at 15% 0%,   rgba(124, 58, 237, 0.11) 0%, transparent 65%),
-    radial-gradient(ellipse 55% 45% at 85% 100%, rgba(59, 130, 246, 0.09) 0%, transparent 65%),
+    radial-gradient(circle at 50% -120px, rgba(99, 102, 241, 0.06) 0%, transparent 60%),
     var(--bg);
   min-height: 100vh;
 }
@@ -53,8 +52,8 @@ body {
 .card {
   background:    var(--surface);
   border:        1px solid var(--border);
-  border-radius: 20px;
-  backdrop-filter: blur(16px);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
 }
 
 /* ── Section inside a card ── */
@@ -207,17 +206,17 @@ select.field-input option { background: #1a1a2e; color: #fff; }
   font-weight:     700;
   font-family:     var(--font-sans);
   color:           #fff;
-  background:      linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #3b82f6 100%);
+  background:      linear-gradient(135deg, var(--violet) 0%, #4f46e5 100%);
   border:          none;
   cursor:          pointer;
-  box-shadow:      0 4px 28px rgba(124,58,237,0.3);
+  box-shadow:      0 2px 12px rgba(99, 102, 241, 0.2);
   transition:      opacity 0.2s, transform 0.15s, box-shadow 0.2s;
   letter-spacing:  0.01em;
 }
 .btn-primary:hover:not(:disabled) {
   opacity:    0.92;
-  transform:  translateY(-2px);
-  box-shadow: 0 8px 36px rgba(124,58,237,0.45);
+  transform:  translateY(-1px);
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.3);
 }
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -244,9 +243,9 @@ select.field-input option { background: #1a1a2e; color: #fff; }
   flex-shrink: 0;
   transition: all 0.4s;
 }
-.step-done    { background: rgba(124,58,237,0.7); box-shadow: 0 0 16px rgba(124,58,237,0.4); }
-.step-active  { background: rgba(124,58,237,0.4); box-shadow: 0 0 24px rgba(124,58,237,0.5); ring: 4px solid rgba(124,58,237,0.2); }
-.step-pending { background: rgba(255,255,255,0.04); border: 1px solid var(--border); }
+.step-done    { background: rgba(99, 102, 241, 0.6); box-shadow: 0 0 12px rgba(99, 102, 241, 0.2); }
+.step-active  { background: rgba(99, 102, 241, 0.35); box-shadow: 0 0 16px rgba(99, 102, 241, 0.3); outline: 2px solid rgba(99, 102, 241, 0.4); }
+.step-pending { background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
 
 /* ── Spin animation ── */
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -1,7 +1,8 @@
 // Pure SVG Timeline Chart — groups posts by hour bucket and plots counts per sentiment label
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Post } from "@/lib/api";
 
 const COLORS = { Positive: "#10b981", Neutral: "#94a3b8", Negative: "#ef4444" };
@@ -12,6 +13,11 @@ interface Props { posts: Post[]; }
 export default function TimelineChart({ posts }: Props) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!posts.length) {
     return (
@@ -27,8 +33,14 @@ export default function TimelineChart({ posts }: Props) {
   // Build hourly buckets
   const bucketMap = new Map<string, Record<string, number>>();
   for (const post of sorted) {
-    const d    = new Date(post.created_utc);
-    const key  = `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${d.getUTCHours()}h`;
+    const d = new Date(post.created_utc);
+    // Format to a human-readable local time: e.g., "Jul 1, 3 PM"
+    const key = d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      hour12: true,
+    });
     if (!bucketMap.has(key)) bucketMap.set(key, { Positive: 0, Neutral: 0, Negative: 0 });
     const b = bucketMap.get(key)!;
     b[post.sentiment.label] = (b[post.sentiment.label] || 0) + 1;
@@ -59,30 +71,6 @@ export default function TimelineChart({ posts }: Props) {
 
   const toX = (i: number) => PAD.left + i * xStep;
   const toY = (v: number) => PAD.top  + chartH * (1 - v / maxVal);
-
-  // Bezier curve path generator
-  const makeBezierPath = (label: typeof LABELS[number]) => {
-    if (buckets.length < 2) return "";
-    let path = `M ${toX(0)} ${toY(buckets[0][label])}`;
-    for (let i = 0; i < buckets.length - 1; i++) {
-      const x0 = toX(i);
-      const y0 = toY(buckets[i][label]);
-      const x1 = toX(i + 1);
-      const y1 = toY(buckets[i + 1][label]);
-      const cpX1 = x0 + (x1 - x0) / 2;
-      const cpY1 = y0;
-      const cpX2 = x0 + (x1 - x0) / 2;
-      const cpY2 = y1;
-      path += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${x1} ${y1}`;
-    }
-    return path;
-  };
-
-  const makeBezierAreaPath = (label: typeof LABELS[number]) => {
-    const linePath = makeBezierPath(label);
-    if (!linePath) return "";
-    return `${linePath} L ${toX(buckets.length - 1)} ${PAD.top + chartH} L ${toX(0)} ${PAD.top + chartH} Z`;
-  };
 
   const gridLines = [0.25, 0.5, 0.75, 1].map((f) => Math.round(f * maxVal));
 
@@ -130,7 +118,7 @@ export default function TimelineChart({ posts }: Props) {
         <defs>
           {LABELS.map((label) => (
             <linearGradient key={label} id={`grad-${label}-${isModal ? 'modal' : 'normal'}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={COLORS[label]} stopOpacity={0.2} />
+              <stop offset="0%"   stopColor={COLORS[label]} stopOpacity={0.15} />
               <stop offset="100%" stopColor={COLORS[label]} stopOpacity={0}    />
             </linearGradient>
           ))}
@@ -158,7 +146,7 @@ export default function TimelineChart({ posts }: Props) {
             y1={PAD.top}
             x2={curToX(hoveredIndex)}
             y2={actualH - PAD.bottom}
-            stroke="rgba(124,58,237,0.3)"
+            stroke="rgba(99,102,241,0.3)"
             strokeWidth={1.5}
             strokeDasharray="2 2"
           />
@@ -188,7 +176,7 @@ export default function TimelineChart({ posts }: Props) {
                 cy={curToY(b[label])}
                 r={hoveredIndex === i ? 5 : 3.5}
                 fill={COLORS[label]}
-                stroke="#0e0e1e"
+                stroke="#0b0f19"
                 strokeWidth={hoveredIndex === i ? 2 : 1}
                 style={{ transition: "r 0.15s, stroke-width 0.15s" }}
               />
@@ -234,6 +222,77 @@ export default function TimelineChart({ posts }: Props) {
     );
   };
 
+  // Fullscreen Modal Content (using Portal to escape parent transforms)
+  const modalContent = isExpanded && (
+    <div style={{
+      position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+      background: "rgba(6, 9, 17, 0.85)", backdropFilter: "blur(12px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 99999, transition: "opacity 0.2s"
+    }}>
+      <div className="card fade-up" style={{
+        width: "90%", maxWidth: 1000, padding: "32px", position: "relative",
+        background: "#0c1122", border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 10px 40px rgba(0,0,0,0.6)"
+      }}>
+        {/* Modal Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: "#fff", margin: 0 }}>Sentiment Over Time</h3>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "4px 0 0 0" }}>Detailed hourly distribution breakdown</p>
+          </div>
+          
+          {/* Close Button */}
+          <button
+            onClick={() => setIsExpanded(false)}
+            style={{
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center",
+              justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)",
+              transition: "all 0.2s", fontSize: 16, fontWeight: "bold"
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)"; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+            title="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Chart Container */}
+        <div style={{ position: "relative", width: "100%", height: 400 }}>
+          {renderChartContent(true)}
+
+          {/* Modal Tooltip */}
+          {hoveredIndex !== null && (
+            <div style={{
+              position: "absolute",
+              left: `${Math.min(Math.max(( (PAD.left + hoveredIndex * (900 - PAD.left - PAD.right) / (buckets.length - 1 || 1)) / 900) * 100, 10), 90)}%`,
+              top: 20,
+              transform: "translateX(-50%)",
+              background: "rgba(15,15,30,0.95)",
+              border: "1px solid rgba(124,58,237,0.4)",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.8)",
+              borderRadius: 8,
+              padding: "10px 16px",
+              pointerEvents: "none",
+              zIndex: 30
+            }}>
+              <p style={{ margin: "0 0 6px 0", fontSize: 12, fontWeight: 700, color: "#a78bfa", textAlign: "center" }}>
+                Time: {buckets[hoveredIndex].key}
+              </p>
+              <div style={{ display: "flex", gap: 14, fontSize: 12 }}>
+                <span style={{ color: "#34d399" }}>● Positive: {buckets[hoveredIndex].Positive}</span>
+                <span style={{ color: "#94a3b8" }}>● Neutral: {buckets[hoveredIndex].Neutral}</span>
+                <span style={{ color: "#f87171" }}>● Negative: {buckets[hoveredIndex].Negative}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ position: "relative", width: "100%" }}>
       {/* Expand Icon Button */}
@@ -265,8 +324,8 @@ export default function TimelineChart({ posts }: Props) {
             top: -12,
             transform: "translate(-50%, -100%)",
             background: "rgba(15,15,30,0.95)",
-            border: "1px solid rgba(124,58,237,0.3)",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.8), 0 0 10px rgba(124,58,237,0.1)",
+            border: "1px solid rgba(99,102,241,0.3)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.8), 0 0 10px rgba(99,102,241,0.1)",
             borderRadius: 8,
             padding: "8px 12px",
             pointerEvents: "none",
@@ -285,76 +344,8 @@ export default function TimelineChart({ posts }: Props) {
         )}
       </div>
 
-      {/* Fullscreen Expand Modal */}
-      {isExpanded && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-          background: "rgba(8, 8, 16, 0.85)", backdropFilter: "blur(16px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 9999, transition: "opacity 0.2s"
-        }}>
-          <div className="card fade-up" style={{
-            width: "90%", maxWidth: 1000, padding: "32px", position: "relative",
-            background: "rgba(15,15,30,0.95)", border: "1px solid rgba(124,58,237,0.25)",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.6)"
-          }}>
-            {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>Sentiment Over Time</h3>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>Detailed hourly distribution breakdown</p>
-              </div>
-              
-              {/* Close Button */}
-              <button
-                onClick={() => setIsExpanded(false)}
-                style={{
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center",
-                  justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)",
-                  transition: "all 0.2s", fontSize: 16, fontWeight: "bold"
-                }}
-                onMouseOver={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)"; }}
-                onMouseOut={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-                title="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Chart Container */}
-            <div style={{ position: "relative", width: "100%", height: 400 }}>
-              {renderChartContent(true)}
-
-              {/* Modal Tooltip */}
-              {hoveredIndex !== null && (
-                <div style={{
-                  position: "absolute",
-                  left: `${Math.min(Math.max(( (PAD.left + hoveredIndex * (900 - PAD.left - PAD.right) / (buckets.length - 1 || 1)) / 900) * 100, 10), 90)}%`,
-                  top: 20,
-                  transform: "translateX(-50%)",
-                  background: "rgba(15,15,30,0.95)",
-                  border: "1px solid rgba(124,58,237,0.4)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.8)",
-                  borderRadius: 8,
-                  padding: "10px 16px",
-                  pointerEvents: "none",
-                  zIndex: 30
-                }}>
-                  <p style={{ margin: "0 0 6px 0", fontSize: 12, fontWeight: 700, color: "#a78bfa", textAlign: "center" }}>
-                    Time: {buckets[hoveredIndex].key}
-                  </p>
-                  <div style={{ display: "flex", gap: 14, fontSize: 12 }}>
-                    <span style={{ color: "#34d399" }}>● Positive: {buckets[hoveredIndex].Positive}</span>
-                    <span style={{ color: "#94a3b8" }}>● Neutral: {buckets[hoveredIndex].Neutral}</span>
-                    <span style={{ color: "#f87171" }}>● Negative: {buckets[hoveredIndex].Negative}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Portal-rendered Modal */}
+      {mounted && modalContent ? createPortal(modalContent, document.body) : null}
     </div>
   );
 }
